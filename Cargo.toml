@@ -1,0 +1,29 @@
+[package]
+name = "rust-grpc-starterkit"
+version = "0.1.0"
+authors = ["Anthony <anthony.damato@hotmail.fr>"]
+edition = "2018"
+
+[lib]
+name = "protos"
+path = "src/protos/mod.rs"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+
+[dependencies]
+log = "0.4"
+futures = "0.1"
+grpcio = "0.4"
+protobuf = "~2"
+env_logger = "0.7"
+chrono = "0.4"
+rand = "0.7"
+
+[build-dependencies]
+protoc-grpcio = "1.1"
