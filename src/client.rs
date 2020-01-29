@@ -4,7 +4,7 @@ mod shared;
 #[macro_use]
 extern crate log;
 
-use std::sync::Arc;
+use std::{sync::Arc, thread};
 
 use crate::protos::{
 	helloworld::{
@@ -13,7 +13,7 @@ use crate::protos::{
 	helloworld_grpc::GreeterClient,
 };
 use crate::shared::log_utils;
-use futures::{Sink, Stream};
+use futures::{future, Future, Sink, Stream};
 use grpcio::{
 	ChannelBuilder, ClientCStreamReceiver, ClientSStreamReceiver, EnvBuilder, StreamingCallSink,
 	WriteFlags,
@@ -53,20 +53,32 @@ fn main() {
 	}
 
 	// Sum stream test
-	// let values_test: Vec<i32> = vec![1, 4, 5, 6];
+	let values_test: Vec<i32> = vec![1, 4, 5, 6];
 
-	// let (stream_request, stream_receiver): (
-	// 	StreamingCallSink<SumStreamRequest>,
-	// 	ClientCStreamReceiver<SumReply>,
-	// ) = client
-	// 	.sum_stream()
-	// 	.unwrap_or_else(|err| panic!("Error while creating sum stream client func: {}", err));
+	let (mut stream_request, sum_receiver): (
+		StreamingCallSink<SumStreamRequest>,
+		ClientCStreamReceiver<SumReply>,
+	) = client
+		.sum_stream()
+		.unwrap_or_else(|err| panic!("Error while creating sum stream client func: {}", err));
 
-	// let iter_send = values_test.iter().map(|i| {
-	// 	let mut req_sumstream = SumStreamRequest::default();
-	// 	req_sumstream.set_value(*i);
-	// 	req_sumstream
-	// }).collect::<Vec<_>>().iter();
+	for value in values_test {
+		let mut sending_value = SumStreamRequest::new();
+		sending_value.set_value(value);
 
-	// stream_request.send_all((iter_send, WriteFlags::default()));
+		stream_request = stream_request
+			.send((sending_value, WriteFlags::default()))
+			.wait()
+			.unwrap();
+	}
+	stream_request
+		.close()
+		.expect("Error while closing the Sum Stream Request");
+
+	let response: i32 = sum_receiver
+		.wait()
+		.map(|result: protos::helloworld::SumReply| result.get_sum())
+		.expect("Couldn't receive the sum response");
+
+	info!("Received Sum Stream Response: {}", response);
 }
