@@ -19,11 +19,11 @@ use grpcio::{
 use rand;
 
 use crate::protos::{
-    helloworld::{
-        GeneratorReply, GeneratorRequest, HelloReply, HelloRequest, SumReply, SumRequest,
+    mathematician::{
+        GeneratorReply, GeneratorRequest, SumReply, SumRequest,
         SumStreamRequest,
     },
-    helloworld_grpc::{create_greeter, Greeter},
+    mathematician_grpc::{create_mathematician, Mathematician},
 };
 
 use crate::shared::log_utils;
@@ -40,18 +40,9 @@ impl Iterator for GeneratorIter {
 }
 
 #[derive(Clone)]
-struct GreeterService;
+struct MathematicianService;
 
-impl Greeter for GreeterService {
-    fn say_hello(&mut self, ctx: RpcContext<'_>, req: HelloRequest, sink: UnarySink<HelloReply>) {
-        let msg = format!("Hello {}", req.get_name());
-        let mut resp = HelloReply::default();
-        resp.set_message(msg);
-        let f = sink
-            .success(resp)
-            .map_err(move |e| error!("failed to reply {:?}: {:?}", req, e));
-        ctx.spawn(f)
-    }
+impl Mathematician for MathematicianService {
 
     fn compute_sum(&mut self, ctx: RpcContext<'_>, req: SumRequest, sink: UnarySink<SumReply>) {
         let mut resp = SumReply::default();
@@ -111,9 +102,9 @@ fn main() {
     log_utils::init();
 
     let env = Arc::new(Environment::new(1));
-    let service = create_greeter(GreeterService);
+    let service = create_mathematician(MathematicianService);
 
-    let quota = ResourceQuota::new(Some("HelloServerQuota")).resize_memory(1024 * 1024);
+    let quota = ResourceQuota::new(Some("MathematicianServerQuota")).resize_memory(1024 * 1024);
     let ch_builder = ChannelBuilder::new(env.clone()).resource_quota(quota);
 
     let mut server = ServerBuilder::new(env)

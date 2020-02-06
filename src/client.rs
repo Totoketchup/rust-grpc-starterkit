@@ -7,10 +7,10 @@ extern crate log;
 use std::{sync::Arc, thread};
 
 use crate::protos::{
-	helloworld::{
-		GeneratorReply, GeneratorRequest, HelloRequest, SumReply, SumRequest, SumStreamRequest,
+	mathematician::{
+		GeneratorReply, GeneratorRequest, SumReply, SumRequest, SumStreamRequest,
 	},
-	helloworld_grpc::GreeterClient,
+	mathematician_grpc::MathematicianClient,
 };
 use crate::shared::log_utils;
 use futures::{future, Future, Sink, Stream};
@@ -24,13 +24,7 @@ fn main() {
 
 	let env = Arc::new(EnvBuilder::new().build());
 	let ch = ChannelBuilder::new(env).connect("localhost:50051");
-	let client = GreeterClient::new(ch);
-
-	// Hello world test
-	let mut req = HelloRequest::default();
-	req.set_name("Anthony !".to_owned());
-	let reply = client.say_hello(&req).expect("rpc");
-	info!("Greeter received: {}", reply.get_message());
+	let client = MathematicianClient::new(ch);
 
 	// Sum test
 	let mut req = SumRequest::default();
@@ -77,7 +71,7 @@ fn main() {
 
 	let response: i32 = sum_receiver
 		.wait()
-		.map(|result: protos::helloworld::SumReply| result.get_sum())
+		.map(|result: protos::mathematician::SumReply| result.get_sum())
 		.expect("Couldn't receive the sum response");
 
 	info!("Received Sum Stream Response: {}", response);

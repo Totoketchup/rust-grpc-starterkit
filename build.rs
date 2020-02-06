@@ -5,7 +5,7 @@ fn main() {
   let proto_root = "src/protos";
   println!("cargo:rerun-if-changed={} Generating gRPC files...", proto_root) ;
   protoc_grpcio::compile_grpc_protos(
-    &["example/helloworld.proto"],
+    &["example/mathematician.proto"],
     &[proto_root],
     &proto_root,
     None,
