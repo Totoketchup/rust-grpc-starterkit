@@ -13,7 +13,7 @@ use std::{
 
 use futures::{stream, sync::oneshot, Future, Sink, Stream};
 use grpcio::{
-    ChannelBuilder, ClientStreamingSink, Environment, Error, RequestStream, ResourceQuota,
+    ChannelBuilder, ClientStreamingSink, DuplexSink, Environment, Error, RequestStream, ResourceQuota,
     RpcContext, ServerBuilder, ServerStreamingSink, UnarySink, WriteFlags,
 };
 use rand;
@@ -21,7 +21,7 @@ use rand;
 use crate::protos::{
     mathematician::{
         GeneratorReply, GeneratorRequest, SumReply, SumRequest,
-        SumStreamRequest,
+        SumStreamRequest, CalculationRequest, Type
     },
     mathematician_grpc::{create_mathematician, Mathematician},
 };
@@ -94,6 +94,37 @@ impl Mathematician for MathematicianService {
         let f = sink
             .success(resp)
             .map_err(move |e| error!("failed to reply: {:?}", e));
+        ctx.spawn(f)
+    }
+
+    fn calculation(
+        &mut self,
+        ctx: RpcContext<'_>,
+        stream: RequestStream<CalculationRequest>,
+        sink: DuplexSink<SumStreamRequest>,
+    ) {
+        let mut current_calculation = 0;
+        let response_stream = stream
+            .map(move |value_message| {
+                match value_message.get_field_type() {
+                    Type::ADD => {
+                        current_calculation += value_message.get_value();
+                    },
+                    Type::MULTIPLY => {
+                        current_calculation *= value_message.get_value();
+                    },
+                    Type::SUBTRACT => {
+                        current_calculation -= value_message.get_value();
+                    },
+                }
+                let mut resp = SumStreamRequest::new();
+                resp.set_value(current_calculation);
+                (resp, WriteFlags::default())
+            });
+        let f = sink
+            .send_all(response_stream)
+            .map(|_| {})
+            .map_err(|e| error!("failed to reply: {:?}", e));
         ctx.spawn(f)
     }
 }

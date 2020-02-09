@@ -13,6 +13,8 @@ service Mathematician {
   rpc NumberGenerator (GeneratorRequest) returns (stream GeneratorReply) {}
 
   rpc SumStream (stream SumStreamRequest) returns (SumReply) {}
+
+  rpc Calculation (stream CalculationRequest) returns (stream SumStreamRequest) {}
 }
 
 message SumRequest {
@@ -34,4 +36,15 @@ message GeneratorReply {
 
 message SumStreamRequest {
   int32 value = 1;
+}
+
+enum Type {
+  ADD = 0;
+  SUBTRACT = 1;
+  MULTIPLY = 2;
+}
+
+message CalculationRequest {
+  int32 value = 1;
+  Type type = 2;
 }
