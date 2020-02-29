@@ -79,21 +79,18 @@ impl Mathematician for MathematicianService {
         stream: RequestStream<SumStreamRequest>,
         sink: ClientStreamingSink<SumReply>,
     ) {
-        let mut sum = 0;
-        for message in stream.wait() {
-            let _ = message
-                .map(|value_message| {
-                    sum += value_message.get_value();
-                })
-                .map_err(|err| {
-                    error!("Error while receiving streamed message: {}", err);
-                });
-        }
-        let mut resp = SumReply::default();
-        resp.set_sum(sum);
-        let f = sink
-            .success(resp)
-            .map_err(move |e| error!("failed to reply: {:?}", e));
+        let f = stream
+            .fold(0, move |mut acc, value_message| {
+                info!("Message received: {:?}", value_message);
+                acc += value_message.get_value();
+                Ok(acc) as Result<_, grpcio::Error>
+            })
+            .and_then(|sum| {
+                let mut resp = SumReply::default();
+                resp.set_sum(sum);
+                sink.success(resp)
+            })
+            .map_err(|e| error!("SumStreamError: Failed to reply: {}", e));
         ctx.spawn(f)
     }
 
